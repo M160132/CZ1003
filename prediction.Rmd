@@ -1,0 +1,77 @@
+---
+title: "prediction"
+author: "RDZ"
+date: "10/22/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(caret)
+library(lattice) 
+library(rpart)
+library(randomForest)
+```
+
+## Exploratory Data Analysis and Data Cleaning
+1. Load the data
+```{r}
+training = read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+testing = read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+```
+2. 
+```{r}
+head(training)
+summary(training)
+```
+
+2. As we can see, the first 7 columns are irrelavant to the analysis. So just remove them.
+```{r}
+training = training[,-c(1:7)]
+testing = testing[,-c(1:7)]
+```
+
+3. Delete all empty columns
+```{r}
+training = training[,colSums(is.na(training)) == 0]
+testing = testing[,colSums(is.na(testing)) == 0]
+```
+
+## Model Selection
+1. Partition training set into trainging set and validation set
+```{r}
+partition <- createDataPartition(y=training$classe, p=0.75, list=FALSE)
+trainingset <- training[partition, ] 
+validatingset <- training[-partition, ]
+```
+
+Have a look at the training set
+```{r}
+plot(trainingset$classe, main="levels of variable classe in trainingset data set")
+```
+
+Firstly, we try to use decision tree to build the model
+```{r}
+model1 <- rpart(classe ~ ., data=trainingset, method="class")
+prediction1 <- predict(model1, validatingset, type = "class")
+confusionMatrix(prediction1, validatingset$classe)
+```
+
+It seems like the accuracy does not reach our expectation by using decision tree model.
+Let's try random forest model then
+
+```{r}
+model2 <- randomForest(classe ~. , data=trainingset, method="class")
+prediction2 <- predict(model2, validatingset, type = "class")
+confusionMatrix(prediction2, validatingset$classe)
+```
+
+Splendid!
+
+Apply the random forsest model to the testing set.
+```{r}
+predictfinal <- predict(model2, testing, type="class")
+predictfinal
+```
+
